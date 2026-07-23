@@ -1,0 +1,122 @@
+# ============================================================
+# VitalDB — Federated Multi-Agent RL for Time Series Imputation
+# ============================================================
+# Configuration for VitalDB surgical vital signs dataset
+# 6,388 surgical patients from Seoul National University Hospital
+#
+# Usage:
+#   python main.py --config configs/vitaldb.yaml
+#   python main.py --config configs/vitaldb.yaml --num-clients 5 --rounds 50
+# ============================================================
+
+seed: 42
+device: "auto"   # auto, cpu, cuda, mps
+
+# --- Data ---
+data:
+  dataset: "vitaldb"                 # ← use VitalDB loader
+  data_dir: "./data/vitaldb"         # cache directory for downloaded data
+  tensor_dir: "../2026_vitalDB/vitaldb_14feats_tensor_T300"  # local pre-processed tensor
+  num_cases: 2500                    # 2500 top-coverage cases in local tensor
+  num_features: 14                   # 14 core vital sign tracks (auto-set by loader)
+  seq_length: 300                    # 300 time steps (matches T300 tensor)
+  resample_interval: 60             # resample to 1-minute intervals
+  min_duration: 30                   # discard surgeries shorter than 30 min
+  max_missing_rate: 0.7              # discard cases with >70% missing
+  use_extended_tracks: false         # true = add ventilator/BIS tracks (26 features)
+  split_strategy: "equipment"       # ---- Splitting strategies ----
+  #   IID:  random | unequal | dirichlet
+  #   Non-IID (data-characteristic-based):
+  #     equipment       - by invasive monitoring equipment (A-line, CVP)
+  #     missing_rate    - by overall data completeness
+  #     acuity          - by patient vital-sign severity (HR, SpO2)
+  #     duration        - by effective surgery duration
+  #     feature_cluster - K-Means on per-feature missing profiles
+  missing_rate: 0.1                  # additional artificial missing for evaluation
+  missing_mechanism: "mcar"          # mcar, mar, mnar
+  train_ratio: 0.7
+  normalization: "standard"
+
+# --- Federation ---
+federation:
+  num_clients: 5                     # 5 simulated hospitals
+  rounds: 50                         # global communication rounds
+  fraction_fit: 1.0                  # all hospitals participate each round
+  local_epochs: 3                    # local training epochs per round
+  aggregation: "fedavg"              # fedavg, fedprox, fedadam
+  fedprox_mu: 0.01
+  non_iid: false                     # false = random equal split; true = dirichlet
+  dirichlet_alpha: 0.5
+  differential_privacy:
+    enabled: false
+    epsilon: 8.0
+    delta: 1e-5
+    max_grad_norm: 1.0
+
+# --- Multi-Agent RL ---
+marl:
+  num_agents: 7                      # 7 agents for 14 features (2 features each)
+  algorithm: "mappo"
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 0.01
+  value_loss_coef: 0.5
+  max_grad_norm: 0.5
+  num_rollout_steps: 32              # shorter rollouts for faster iteration
+  num_mini_batches: 4
+  ppo_epochs: 4
+  use_shared_critic: true
+  communication:
+    enabled: true
+    comm_dim: 32
+    num_comm_rounds: 2
+
+# --- Networks ---
+networks:
+  encoder:
+    type: "transformer"
+    d_model: 128
+    nhead: 4
+    num_layers: 3
+    dim_feedforward: 256
+    dropout: 0.1
+  actor:
+    hidden_dims: [256, 128]
+    activation: "relu"
+    output_activation: "tanh"
+  critic:
+    hidden_dims: [256, 128]
+    activation: "relu"
+
+# --- Training ---
+training:
+  batch_size: 32                     # smaller batch for moderate dataset
+  lr_actor: 3.0e-4
+  lr_critic: 1.0e-3
+  lr_encoder: 1.0e-4
+  weight_decay: 1.0e-5
+  lr_scheduler: "cosine"
+  warmup_steps: 200
+  max_steps: 50000
+
+# --- Reward ---
+reward:
+  primary_metric: "mae"
+  temporal_consistency_weight: 0.1
+  cross_variable_weight: 0.05
+  sparsity_bonus: 0.0
+
+# --- Evaluation ---
+evaluation:
+  eval_every: 5
+  metrics: ["mae", "rmse", "mre", "mape"]
+
+# --- Logging ---
+logging:
+  use_tensorboard: true
+  use_wandb: false
+  log_dir: "./logs/vitaldb"
+  save_dir: "./checkpoints/vitaldb"
+  log_every: 10
+  experiment_name: "vitaldb_5hospital_mappo"

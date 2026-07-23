@@ -1,0 +1,64 @@
+Federated Time-Series Imputation under Heterogeneous MNAR
+Copyright (c) 2026 Joshua Tseng
+Licensed under the MIT License (see LICENSE).
+
+================================================================================
+Third-party academic works and software this project builds upon
+================================================================================
+
+This repository contains ORIGINAL code by the author. No third-party source
+code is vendored (copied) into this repository. The items below are either
+re-implemented from their published algorithms or used as external pip
+dependencies.
+
+--------------------------------------------------------------------------------
+1. CAFE — Complementarity-Aware Federated Imputation
+--------------------------------------------------------------------------------
+  Min et al., "Cafe: Improved Federated Data Imputation by Leveraging Missing
+  Data Heterogeneity" (2025).
+
+  - src/federation/aggregation.py : the complementarity-aware (CA) aggregation
+    rule is a clean re-implementation of the algorithm described in the CAFE
+    paper (cosine-based complementarity of missing-mechanism fingerprints +
+    power-law weighting). Algorithm/mathematics only; no CAFE source code is used.
+  - src/baselines/fedice.py : a federated ICE baseline adapted from CAFE's
+    ICE-style approach to the time-series tensor setting.
+
+  The original CAFE implementation lives at sitaomin1994/federated_imputation and
+  is NOT included in this repository.
+
+  Note: the presentation slides (docs/slides.pdf) reproduce two figures from the
+  CAFE paper (Fig. 1 and Fig. 2, © IEEE / the original authors), shown with
+  attribution for academic illustration only. Those figures remain the property of
+  their copyright holders and are not covered by this repository's MIT license.
+
+--------------------------------------------------------------------------------
+2. SAITS — Self-Attention-based Imputation for Time Series
+--------------------------------------------------------------------------------
+  Du, Cote & Liu, "SAITS: Self-Attention-based Imputation for Time Series",
+  Expert Systems with Applications (2023).
+
+  - Used as the local imputation backbone via the PyPOTS library
+    (https://github.com/WenjieDu/PyPOTS, BSD-3-Clause), installed as a pip
+    dependency. src/models/saits_model.py is an ORIGINAL wrapper that calls
+    PyPOTS's SAITS for federated parameter exchange; it does not copy SAITS code.
+
+--------------------------------------------------------------------------------
+3. Federated learning baselines
+--------------------------------------------------------------------------------
+  - FedAvg  — McMahan et al. (2017)
+  - FedProx — Li et al. (2020)
+  - FedAdam — Reddi et al. (2021)
+  Re-implemented from their respective papers in src/federation/aggregation.py.
+
+--------------------------------------------------------------------------------
+4. Data
+--------------------------------------------------------------------------------
+  No raw or preprocessed patient data is included in this repository. Each dataset
+  is used under its own data-use terms.
+  - VitalDB (https://vitaldb.net/) — open surgical biosignal database.
+    Lee & Jung (2018), Scientific Data 5, 180077.
+  - MIMIC-III — Johnson et al. (2016), Scientific Data 3, 160035
+    (credentialed access via PhysioNet).
+  - eICU Collaborative Research Database, Demo 2.0.1 — Pollard et al. (2018),
+    Scientific Data 5, 180178 (PhysioNet).

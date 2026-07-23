@@ -1,0 +1,22 @@
+name: fed-marl
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch
+  - torchvision
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - pyyaml
+  - tqdm
+  - pip
+  - pip:
+      - gymnasium>=0.29.0
+      - tensorboard>=2.14.0
+      - wandb>=0.15.0

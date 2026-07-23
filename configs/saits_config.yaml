@@ -1,0 +1,85 @@
+# ============================================================
+#  Federated SAITS Imputation Configuration
+# ============================================================
+
+# --- Data Settings ---
+data:
+  type: "vitaldb"                  # "vitaldb" or "synthetic"
+  seq_length: 300                  # Time steps per window (matches T300 tensor)
+  num_features: 14                 # Features (14 core VitalDB tracks)
+  missing_rate: 0.2                # Fraction of artificially missing values
+  missing_mechanism: "mcar"        # mcar | mar | mnar
+  num_synthetic_samples: 1000      # Only used if type=synthetic
+  cache_dir: "data/vitaldb_cache"
+  tensor_dir: "../2026_vitalDB/tensor-file-for-4feature-20260304T112438Z-3-001/tensor-file-for-4feature/vitaldb_14feats_tensor_T300"  # local pre-processed tensor
+  split_strategy: "equipment"       # Splitting strategy (see vitaldb section for options)
+
+# --- VitalDB Specific ---
+vitaldb:
+  num_cases: 2500                  # Number of surgical cases (2500 in local tensor)
+  use_extended_tracks: false       # Use 14 core tracks only
+  resample_interval: 60            # Resample to 1-min intervals (seconds)
+  min_length: 48                   # Minimum time steps required
+  max_length: 300                  # Maximum time steps
+  normalize: true                  # Z-score normalization
+  split_strategy: "equipment"       # ---- Splitting strategies ----
+  #   IID:  random | unequal | dirichlet
+  #   Non-IID (data-characteristic-based):
+  #     equipment       - by invasive monitoring equipment (A-line, CVP)
+  #     missing_rate    - by overall data completeness
+  #     acuity          - by patient vital-sign severity (HR, SpO2)
+  #     duration        - by effective surgery duration
+  #     feature_cluster - K-Means on per-feature missing profiles
+  cache_dir: "data/vitaldb_cache"
+  test_ratio: 0.15                 # Global test set ratio
+
+# --- Federation Settings ---
+federation:
+  num_clients: 5                   # Number of hospital clients
+  rounds: 50                       # Number of federated rounds (50 sufficient per convergence analysis)
+  frac_clients: 1.0                # Fraction of clients per round
+  aggregation: "fedavg"            # fedavg | fedprox | fedadam
+
+  # FedProx
+  mu: 0.01                         # Proximal term weight
+
+  # FedAdam
+  server_lr: 0.01
+  beta1: 0.9
+  beta2: 0.999
+  tau: 1.0e-3
+
+# --- SAITS Model ---
+saits:
+  n_layers: 2                      # Transformer layers
+  d_model: 256                     # Model dimension
+  n_heads: 4                       # Attention heads
+  d_ffn: 128                       # Feed-forward dimension
+  d_k: 64                          # Key dimension per head
+  d_v: 64                          # Value dimension per head
+  dropout: 0.1                     # Dropout rate
+  attn_dropout: 0.0                # Attention dropout
+  diagonal_attention_mask: true    # SAITS diagonal mask
+  ORT_weight: 1.0                  # Observed Reconstruction Task weight
+  MIT_weight: 1.0                  # Masked Imputation Task weight
+
+  # Local training per round
+  local_epochs: 5                  # Training epochs per FL round (5 is standard for FL)
+  batch_size: 32                   # Batch size
+  learning_rate: 0.001             # Learning rate (Adam)
+  patience: 3                      # Early stopping patience (local, within each round)
+
+# --- Training Settings ---
+training:
+  seed: 42
+  eval_every: 1                    # Evaluate global model every N rounds
+  early_stop_patience: 10          # Global early stopping patience (10 rounds without improvement)
+  checkpoint_dir: "checkpoints/saits"
+
+# --- Logging ---
+logging:
+  log_dir: "logs/saits"
+  use_tensorboard: true
+  use_wandb: false
+  wandb_project: "fed-saits"
+  print_every: 1

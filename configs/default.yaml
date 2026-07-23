@@ -1,0 +1,112 @@
+# ============================================================
+# Federated Multi-Agent RL for Time Series Imputation
+# Default Configuration
+# ============================================================
+
+seed: 42
+device: "auto"  # auto, cpu, cuda, mps
+
+# --- Data ---
+data:
+  dataset: "physionet2012"           # physionet2012, mimic3, eicu, custom
+  data_dir: "./data"
+  num_features: 37                   # number of clinical variables
+  seq_length: 48                     # time steps (hours)
+  missing_rate: 0.3                  # artificial missing rate for evaluation
+  missing_mechanism: "mcar"          # mcar, mar, mnar
+  normalization: "standard"          # standard, minmax, none
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+# --- Federation ---
+federation:
+  num_clients: 5                     # number of hospitals
+  rounds: 100                        # global communication rounds
+  fraction_fit: 1.0                  # fraction of clients selected per round
+  local_epochs: 5                    # local training epochs per round
+  aggregation: "fedavg"              # fedavg, fedprox, fedadam
+  fedprox_mu: 0.01                   # proximal term coefficient (FedProx)
+  non_iid: true                      # enable non-iid data partition
+  dirichlet_alpha: 0.5               # Dirichlet concentration (lower = more heterogeneous)
+  differential_privacy:
+    enabled: false
+    epsilon: 8.0
+    delta: 1e-5
+    max_grad_norm: 1.0
+
+# --- Multi-Agent RL ---
+marl:
+  num_agents: 6                      # agents (each handles a group of features)
+  algorithm: "mappo"                 # mappo, qmix, maddpg
+  gamma: 0.99                        # discount factor
+  gae_lambda: 0.95                   # GAE lambda
+  clip_epsilon: 0.2                  # PPO clip range
+  entropy_coef: 0.01                 # entropy bonus
+  value_loss_coef: 0.5               # value function loss weight
+  max_grad_norm: 0.5                 # gradient clipping
+  num_rollout_steps: 64              # steps per rollout
+  num_mini_batches: 4                # mini-batches for PPO update
+  ppo_epochs: 4                      # PPO update epochs per rollout
+  use_shared_critic: true            # centralized critic (CTDE)
+  communication:
+    enabled: true                    # inter-agent communication
+    comm_dim: 32                     # communication channel dimension
+    num_comm_rounds: 2               # message passing rounds
+
+# --- Networks ---
+networks:
+  # Imputation backbone (shared encoder)
+  encoder:
+    type: "transformer"              # transformer, gru, lstm
+    d_model: 128
+    nhead: 4
+    num_layers: 3
+    dim_feedforward: 256
+    dropout: 0.1
+
+  # Actor network
+  actor:
+    hidden_dims: [256, 128]
+    activation: "relu"
+    output_activation: "tanh"        # bound imputed values
+
+  # Critic network
+  critic:
+    hidden_dims: [256, 128]
+    activation: "relu"
+
+# --- Training ---
+training:
+  batch_size: 64
+  lr_actor: 3.0e-4
+  lr_critic: 1.0e-3
+  lr_encoder: 1.0e-4
+  weight_decay: 1.0e-5
+  lr_scheduler: "cosine"             # cosine, step, none
+  warmup_steps: 500
+  max_steps: 100000
+
+# --- Reward ---
+reward:
+  primary_metric: "mae"              # mae, rmse, mre
+  temporal_consistency_weight: 0.1   # penalize non-smooth imputation
+  cross_variable_weight: 0.05        # penalize inconsistent cross-variable imputation
+  sparsity_bonus: 0.0                # bonus for confident imputation
+
+# --- Evaluation ---
+evaluation:
+  eval_every: 5                      # evaluate every N federation rounds
+  metrics: ["mae", "rmse", "mre", "mape"]
+  save_best: true
+  patience: 20                       # early stopping patience
+
+# --- Logging ---
+logging:
+  log_dir: "./logs"
+  save_dir: "./checkpoints"
+  use_wandb: false
+  wandb_project: "fed-marl-imputation"
+  wandb_entity: null
+  log_every: 10
+  verbose: true
